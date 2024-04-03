@@ -5,15 +5,12 @@ package main
 
 // этот код закомментирован чтобы он не светился в тестовом покрытии
 
-import (
-	"fmt"
-	"net/http"
-)
-
 func main() {
 	// будет вызван метод ServeHTTP у структуры MyApi
-	http.Handle("/user/", NewMyApi())
+	//http.Handle("/user/", NewMyApi())
+	//
+	//fmt.Println("starting server at :8080")
+	//http.ListenAndServe(":8080", nil)
 
-	fmt.Println("starting server at :8080")
-	http.ListenAndServe(":8080", nil)
+	CollectMethodsInfo("api.go")
 }
