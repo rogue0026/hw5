@@ -17,17 +17,17 @@ import (
 */
 
 type Label struct {
-	URL    string
-	Auth   bool
-	Method string
+	URL        string
+	Auth       bool
+	HTTPMethod string
 }
 
 type Field struct {
-	Name string
-	Type string
+	Name     string
+	TypeName string
 }
 
-type Method struct {
+type MethodInfo struct {
 	Name       string
 	Parameters []Field
 }
@@ -48,10 +48,10 @@ func CollectMethodsInfo(filename string) {
 					label := v.Doc.Text()
 					if strings.Index(label, "{") != -1 { // проверяем, есть ли в комментарии метка для генерации кода
 						label = label[strings.Index(label, "{")+1 : strings.Index(label, "}")]
-						_ = ParseMethodLabel(label) // todo
-
-						methodInfo := ParseAPIMethod(v)
-						fmt.Println(*methodInfo)
+						l := ParseMethodLabel(label) // todo
+						m := ParseAPIMethod(v)
+						//fmt.Printf("parameters: %v\n\n", m.Parameters)
+						//fmt.Printf("label: %v\n\n", l)
 					}
 				}
 			}
@@ -59,32 +59,16 @@ func CollectMethodsInfo(filename string) {
 	}
 }
 
-func ParseAPIMethod(method *ast.FuncDecl) *Method {
-	inf := &Method{}
-	inf.Name = method.Name.Name
-	if params := method.Type.TypeParams; params != nil {
-		for _, el := range params.List {
-			f := Field{}
-			f.Name = el.Names[0].Name
-			if TypeInfo, ok := el.Type.(*ast.Ident); ok {
-				f.Type = TypeInfo.Name
-			}
-			inf.Parameters = append(inf.Parameters, f)
-		}
-	}
-	return inf
-}
-
-func ParseMethodLabel(label string) *Label {
+func ParseMethodLabel(label string) Label {
 	pairs := strings.Split(strings.TrimRight(strings.TrimLeft(label, "{"), "}"), ", ")
-	mlInfo := &Label{}
+	mlInfo := Label{}
 	if len(pairs) == 3 {
-		mlInfo.URL = strings.Trim(strings.Split(pairs[0], ": ")[1], `"`)
+		mlInfo.URL = strings.Trim(strings.Split(pairs[0], ": ")[1], `" `)
 		authVal := strings.Split(pairs[1], ": ")[1]
 		if authVal == "true" {
 			mlInfo.Auth = true
 		}
-		mlInfo.Method = strings.Trim(strings.Split(pairs[2], ": ")[1], `"'`)
+		mlInfo.HTTPMethod = strings.Trim(strings.Split(pairs[2], ": ")[1], `"'`)
 	} else if len(pairs) == 2 {
 		mlInfo.URL = strings.Trim(strings.Split(pairs[0], ": ")[1], `"`)
 		authVal := strings.Split(pairs[1], ": ")[1]
@@ -93,4 +77,28 @@ func ParseMethodLabel(label string) *Label {
 		}
 	}
 	return mlInfo
+}
+
+func ParseAPIMethod(method *ast.FuncDecl) MethodInfo {
+	res := MethodInfo{}
+	res.Name = method.Name.Name
+	if method.Type.Params.List != nil {
+		for _, field := range method.Type.Params.List {
+			fieldName := field.Names[0].String()
+			if ti, ok := field.Type.(*ast.SelectorExpr); ok { // здесь пробуем получить тип поля, объявленный в другом пакете
+				typeName := ti.Sel.String() // здесь должно быть название типа
+				if packName, ok := ti.X.(*ast.Ident); ok {
+					pName := packName.String()
+					res.Parameters = append(res.Parameters,
+						Field{Name: fieldName, TypeName: pName + "." + typeName})
+				}
+			}
+			if ti, ok := field.Type.(*ast.Ident); ok {
+				typename := ti.String()
+				res.Parameters = append(res.Parameters,
+					Field{Name: fieldName, TypeName: typename})
+			}
+		}
+	}
+	return res
 }
