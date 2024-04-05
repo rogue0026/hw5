@@ -18,8 +18,6 @@ func (ae ApiError) Error() string {
 	return ae.Err.Error()
 }
 
-// ----------------
-
 const (
 	statusUser      = 0
 	statusModerator = 10
