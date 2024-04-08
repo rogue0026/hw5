@@ -14,8 +14,30 @@ type ApiError struct {
 	Err        error
 }
 
+type ProfileParams struct {
+	Login string `apivalidator:"required"`
+}
+
 func (ae ApiError) Error() string {
 	return ae.Err.Error()
+}
+
+type CreateParams struct {
+	Login  string `apivalidator:"required,min=10"`
+	Name   string `apivalidator:"paramname=full_name"`
+	Status string `apivalidator:"enum=user|moderator|admin,default=user"`
+	Age    int    `apivalidator:"min=0,max=128"`
+}
+
+type User struct {
+	ID       uint64 `json:"id"`
+	Login    string `json:"login"`
+	FullName string `json:"full_name"`
+	Status   int    `json:"status"`
+}
+
+type NewUser struct {
+	ID uint64 `json:"id"`
 }
 
 const (
@@ -49,28 +71,6 @@ func NewMyApi() *MyApi {
 		nextID: 43,
 		mu:     &sync.RWMutex{},
 	}
-}
-
-type ProfileParams struct {
-	Login string `apivalidator:"required"`
-}
-
-type CreateParams struct {
-	Login  string `apivalidator:"required,min=10"`
-	Name   string `apivalidator:"paramname=full_name"`
-	Status string `apivalidator:"enum=user|moderator|admin,default=user"`
-	Age    int    `apivalidator:"min=0,max=128"`
-}
-
-type User struct {
-	ID       uint64 `json:"id"`
-	Login    string `json:"login"`
-	FullName string `json:"full_name"`
-	Status   int    `json:"status"`
-}
-
-type NewUser struct {
-	ID uint64 `json:"id"`
 }
 
 // apigen:api {"url": "/user/profile", "auth": false}
